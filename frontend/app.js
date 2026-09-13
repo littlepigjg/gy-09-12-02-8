@@ -27,6 +27,9 @@ const app = createApp({
       commonResult: "",
       pagerankTop: 10,
       pagerankList: [],
+      recNode: "",
+      recTopN: 10,
+      recList: [],
       communityInfo: null,
       communityColors: {},
       hasGraph: false,
@@ -244,6 +247,35 @@ const app = createApp({
     async runPagerank() {
       const { top } = await this.api(`/api/pagerank?top_n=${this.pagerankTop}`);
       this.pagerankList = top;
+    },
+
+    async runRecommend() {
+      const params = new URLSearchParams({ top_n: this.recTopN });
+      if (this.recNode) params.set("node", this.recNode);
+      const { recommendations } = await this.api(`/api/friend_recommendations?${params}`);
+      this.recList = recommendations;
+    },
+
+    // 高亮推荐的一对节点及其共同好友：两人 + 共同好友 + 之间的连接边
+    highlightRec(item) {
+      this.cy.elements().removeClass("highlight dim");
+      this.cy.elements().addClass("dim");
+
+      const nodes = new Set([item.source, item.target, ...item.mutual_friends]);
+      const els = this.cy.collection();
+      nodes.forEach((id) => {
+        const n = this.cy.getElementById(id);
+        if (n.length) els.merge(n);
+      });
+      [item.source, item.target].forEach((end) => {
+        item.mutual_friends.forEach((w) => {
+          const e = this.cy.getElementById(edgeKey(end, w));
+          if (e.length) els.merge(e);
+        });
+      });
+
+      els.removeClass("dim").addClass("highlight");
+      this.cy.fit(els, 80);
     },
 
     async detectCommunities() {

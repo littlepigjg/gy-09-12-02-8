@@ -62,6 +62,14 @@ class Graph:
     def degree(self, node_id):
         return len(self.adj.get(node_id, {}))
 
+    def communities(self):
+        """Louvain 社群划分，首次调用时计算并缓存，导入新数据后失效。"""
+        if self._communities is None:
+            from . import algorithms
+
+            self._communities = algorithms.louvain(self)
+        return self._communities
+
     def node_ids(self):
         return list(self.adj.keys())
 

@@ -7,6 +7,7 @@
 - **图数据导入**：支持导入节点/边 JSON 数据，或一键生成带社群结构的样例网络
 - **最短路径**：BFS 广度优先搜索，前端高亮展示路径
 - **共同好友**：基于邻接表集合求交集
+- **好友推荐（链接预测）**：对 2 跳非好友对计算共同好友 / Jaccard / Adamic-Adar / 社群 / 资料属性等特征加权得分，输出 Top-N「该认识却还没认识」的配对并生成中文理由
 - **PageRank**：简化幂迭代实现，输出影响力 Top-N 排名
 - **社群发现**：Louvain 算法（局部移动 + 社区聚合），前端按社群着色
 - **图统计**：节点数、边数、平均度、密度等基础指标
@@ -28,6 +29,8 @@
 │   ├── storage.py       # SQLite 节点/边表持久化
 │   ├── graph.py         # 内存邻接表缓存
 │   ├── algorithms.py    # BFS / 共同好友 / PageRank / Louvain
+│   ├── link_prediction.py        # 好友推荐（链接预测）与解释生成
+│   ├── evaluate_link_prediction.py # 链接预测留出评估（precision@K）
 │   └── sample_data.py   # 随机块模型样例数据生成
 ├── frontend/
 │   ├── index.html
@@ -82,6 +85,7 @@ bash run.sh 8000
 | GET  | `/api/stats` | 图基础统计 |
 | GET  | `/api/shortest_path?from&to` | BFS 最短路径 |
 | GET  | `/api/common_friends?node1&node2` | 共同好友 |
+| GET  | `/api/friend_recommendations?node=&top_n=` | 好友推荐：不带 node 返回全图 Top 配对，带 node 返回该用户的「你可能认识」 |
 | GET  | `/api/pagerank?top_n=10` | PageRank 排名 |
 | GET  | `/api/communities` | Louvain 社群划分 |
 | GET  | `/api/neighbors?node` | 节点邻居 |
@@ -106,6 +110,12 @@ bash run.sh 8000
 
 - **BFS 最短路径**：无权图广度优先搜索，时间复杂度 O(V+E)
 - **共同好友**：两节点邻接集合求交集，O(min(deg(a), deg(b)))
+- **好友推荐（链接预测）**：
+  - 候选生成：只考察「好友的好友」（2 跳可达）的非好友对，避免 O(V²) 全量配对
+  - 特征：共同好友数、Jaccard、Adamic-Adar（共同好友度数越小权重越高）、优先连接、是否同社群（Louvain）、资料属性重合度
+  - 打分：连续特征在候选集内 log1p + min-max 归一后加权求和，默认权重见 `link_prediction.DEFAULT_WEIGHTS`；优先连接默认置 0 以避免「大 V」霸榜
+  - 解释：按各特征对总分的贡献取 Top-3，渲染为中文理由（共同好友名单、强纽带、同社群、资料标签一致等）
+  - 离线评估：`python -m backend.evaluate_link_prediction` 隐藏 10% 边作为「未来好友关系」，输出 precision@K 与各单特征消融对比（样例数据上 P@10 约为随机基线的 10 倍）；生产环境应改用历史加好友数据训练 LR/GBDT 学习权重
 - **PageRank（简化）**：幂迭代法，阻尼系数 0.85，按出度均分权重，悬挂节点权重回流
 - **Louvain 社群发现**：两阶段迭代——局部移动（按模块度增益 `ΔQ = k_i,in/m - Σ_tot·k_i/(2m²)` 移动节点）+ 社区聚合（将社区收缩为超节点递归），多层级执行至模块度收敛
 

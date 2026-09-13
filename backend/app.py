@@ -6,6 +6,7 @@ from flask import Flask, jsonify, request, send_from_directory
 from .storage import Storage
 from .graph import Graph
 from . import algorithms
+from . import link_prediction
 from .sample_data import generate_social_network
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -142,6 +143,22 @@ def api_communities():
             "groups": {str(k): v for k, v in groups.items()},
         }
     )
+
+
+@app.route("/api/friend_recommendations", methods=["GET"])
+def api_friend_recommendations():
+    """好友推荐（链接预测）。
+
+    - 不带 node：返回全图「该认识却还没认识」的 Top 配对
+    - 带 node：返回该用户的「你可能认识」推荐列表
+    """
+    node = request.args.get("node")
+    top_n = int(request.args.get("top_n", 10))
+    if node and not graph.has_node(node):
+        return jsonify({"error": f"节点不存在: {node}"}), 400
+
+    recs = link_prediction.recommend(graph, node=node, top_n=top_n)
+    return jsonify({"node": node, "recommendations": recs})
 
 
 @app.route("/api/neighbors", methods=["GET"])

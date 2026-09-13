@@ -214,6 +214,38 @@ html, body {
   font-family: monospace;
 }
 
+.rec-list {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+.rec-list li {
+  padding: 6px;
+  border-bottom: 1px solid #1f2837;
+  font-size: 12px;
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+.rec-list li:hover {
+  background: #141a26;
+}
+
+.rec-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.rec-reasons {
+  margin: 3px 0 0 26px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
 .legend {
   display: flex;
   flex-wrap: wrap;
